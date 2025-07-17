@@ -1,0 +1,12 @@
+[package]
+name = "simulation"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+config = "0.15.13"
+serde = "1.0.219"
+serde_yaml = "0.9.34"
+sphinx-packet = "0.6.0"
+tokio = { version = "1.46.1", features = ["sync", "rt-multi-thread", "macros", "time"] }
+x25519-dalek = "2.0.1"

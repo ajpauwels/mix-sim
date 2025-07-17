@@ -1,0 +1,9 @@
+server:
+  buffer_size: 32
+clients:
+- id: bob
+  buffer_size: 32
+- id: alice
+- id: alex
+- id: juliette
+- id: michael
