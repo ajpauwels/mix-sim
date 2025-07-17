@@ -1,4 +1,3 @@
-use tokio::sync::mpsc::Sender as MpscSender;
 use x25519_dalek::PublicKey;
 
 pub struct DirectoryRegistration {

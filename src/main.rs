@@ -1,24 +1,19 @@
 mod client;
-mod client_command;
-mod client_send_error;
 mod config;
 mod directory;
-mod directory_registration;
-mod get_registration_error;
 mod message;
-mod registration_error;
 mod server;
-mod server_command;
-mod server_registration;
 mod user;
 
-use client::Client;
+use crate::client::Client;
+use crate::server::Server;
+use crate::user::User;
 use config::load_config;
-use server::Server;
+use directory::Directory;
 use tokio::task::JoinSet;
-use user::User;
 
 const DEFAULT_SERVER_BUFFER_SIZE: usize = 32;
+const DEFAULT_DIRECTORY_BUFFER_SIZE: usize = 32;
 const DEFAULT_CLIENT_BUFFER_SIZE: usize = 32;
 
 #[tokio::main]
@@ -38,6 +33,18 @@ async fn main() {
     let server_tx = s.get_tx();
     let server = tokio::spawn(async move { s.listen().await });
 
+    // Create directory
+    let directory_buffer_size = if let Some(directory) = config.directory {
+        directory
+            .buffer_size
+            .unwrap_or(DEFAULT_DIRECTORY_BUFFER_SIZE)
+    } else {
+        DEFAULT_DIRECTORY_BUFFER_SIZE
+    };
+    let mut d = Directory::new(directory_buffer_size);
+    let directory_tx = d.get_tx();
+    let directory = tokio::spawn(async move { d.listen().await });
+
     // Create clients
     let mut client_set = JoinSet::new();
     let mut user_set = JoinSet::new();
@@ -54,7 +61,8 @@ async fn main() {
             let server_tx = server_tx.clone();
             client_set.spawn(async move { client.listen(server_tx).await });
 
-            let user = User::new(client_tx);
+            let directory_tx = directory_tx.clone();
+            let user = User::new(client_tx, directory_tx);
 
             if client_config.id == next_client_config.id {
                 let user_id = client_config.id.clone();
@@ -79,6 +87,10 @@ async fn main() {
     // Handle errors
     match server.await {
         Ok(_) => println!("Server exited successfully"),
+        Err(e) => eprintln!("{e}"),
+    };
+    match directory.await {
+        Ok(_) => println!("Directory exited successfully"),
         Err(e) => eprintln!("{e}"),
     };
     while let Some(res) = client_set.join_next().await {

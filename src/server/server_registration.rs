@@ -1,6 +1,6 @@
 use tokio::sync::mpsc::Sender as MpscSender;
 
-use crate::client_command::ClientCommand;
+use crate::client::ClientCommand;
 
 pub struct ServerRegistration {
     pub id: String,

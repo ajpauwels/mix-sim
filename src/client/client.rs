@@ -1,16 +1,12 @@
 use tokio::sync::mpsc::{self, Receiver as MpscReceiver, Sender as MpscSender};
-use x25519_dalek::{PublicKey, StaticSecret};
 
 use crate::{
-    client_command::ClientCommand, client_send_error::ClientSendError, message::Message,
-    registration_error::RegistrationError, server_command::ServerCommand,
-    server_registration::ServerRegistration,
+    client::ClientCommand, client::ClientSendError, message::Message, server::ServerCommand,
+    server::ServerRegistration, server::ServerRegistrationError,
 };
 
 pub struct Client {
     id: String,
-    sk: StaticSecret,
-    //address_book: HashMap<String, Registration>,
     client_tx: MpscSender<ClientCommand>,
     client_rx: MpscReceiver<ClientCommand>,
 }
@@ -18,11 +14,8 @@ pub struct Client {
 impl Client {
     pub fn new(id: &str, buffer_size: usize) -> Self {
         let (client_tx, client_rx) = mpsc::channel::<ClientCommand>(buffer_size);
-        let sk = StaticSecret::random();
         Self {
             id: id.to_owned(),
-            sk,
-            //address_book: HashMap::new(),
             client_tx,
             client_rx,
         }
@@ -30,8 +23,8 @@ impl Client {
 
     pub async fn listen(&mut self, server_tx: MpscSender<ServerCommand>) {
         // Register client at server
-        let pk = PublicKey::from(&self.sk);
-        let (response_tx, mut response_rx) = mpsc::channel::<Option<RegistrationError>>(1);
+        let (response_tx, mut response_rx) =
+            mpsc::channel::<Result<(), ServerRegistrationError>>(1);
         let cmd = ServerCommand::Register(
             ServerRegistration {
                 id: self.id.clone(),
@@ -47,10 +40,10 @@ impl Client {
             return;
         }
         match response_rx.recv().await {
-            Some(None) => {
+            Some(Ok(_)) => {
                 println!("[CLIENT][{}] Successfully registered at server", &self.id);
             }
-            Some(Some(e)) => {
+            Some(Err(e)) => {
                 eprintln!("[CLIENT][{}] Failed to register at server: {e}", &self.id);
                 return;
             }

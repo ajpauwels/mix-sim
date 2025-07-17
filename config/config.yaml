@@ -1,9 +1,15 @@
+directory:
+  buffer_size: 32
 server:
   buffer_size: 32
 clients:
 - id: bob
   buffer_size: 32
 - id: alice
+  buffer_size: 32
 - id: alex
+  buffer_size: 32
 - id: juliette
+  buffer_size: 32
 - id: michael
+  buffer_size: 32

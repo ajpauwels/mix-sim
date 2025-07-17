@@ -3,15 +3,14 @@ use std::collections::{hash_map::Entry, HashMap};
 use tokio::sync::mpsc::{self, Receiver as MpscReceiver, Sender as MpscSender};
 
 use crate::{
-    client_command::ClientCommand, get_registration_error::GetRegistrationError,
-    registration::Registration, registration_error::RegistrationError,
-    server_command::ServerCommand,
+    client::ClientCommand, server::ServerCommand, server::ServerRegistration,
+    server::ServerRegistrationError,
 };
 
-pub struct Directory {
-    directory_tx: MpscSender<DirectoryCommand>,
-    directory_rx: MpscReceiver<DirectoryCommand>,
-    registrations: HashMap<String, Registration>,
+pub struct Server {
+    server_tx: MpscSender<ServerCommand>,
+    server_rx: MpscReceiver<ServerCommand>,
+    registrations: HashMap<String, ServerRegistration>,
 }
 
 impl Server {
@@ -32,8 +31,9 @@ impl Server {
                     match self.registrations.entry(registration.id.clone()) {
                         Entry::Occupied(oe) => {
                             println!("[SERVER] Client already registered at id \"{}\"", oe.key());
-                            if let Err(e) =
-                                response_tx.send(Some(RegistrationError::Conflict)).await
+                            if let Err(e) = response_tx
+                                .send(Err(ServerRegistrationError::Conflict))
+                                .await
                             {
                                 eprintln!("[SERVER] Failed to notify client that id \"{}\" is already registered: {e}", oe.key());
                             }
@@ -41,31 +41,8 @@ impl Server {
                         Entry::Vacant(ve) => {
                             let oe = ve.insert_entry(registration);
                             println!("[SERVER] Client with id \"{}\" registered", oe.key());
-                            if let Err(e) = response_tx.send(None).await {
+                            if let Err(e) = response_tx.send(Ok(())).await {
                                 eprintln!("[SERVER] Failed to notify client that id \"{}\" was successfully registered: {e}", oe.key());
-                            }
-                        }
-                    }
-                }
-                ServerCommand::GetRegistration(id, response_tx) => {
-                    match self.registrations.get(&id) {
-                        Some(registration) => {
-                            if let Err(e) = response_tx
-                                .send(Ok(Registration {
-                                    id,
-                                    pk: registration.pk,
-                                    tx: None,
-                                }))
-                                .await
-                            {
-                                eprintln!("[SERVER] Could not return registration: {e}");
-                            }
-                        }
-                        None => {
-                            if let Err(e) =
-                                response_tx.send(Err(GetRegistrationError::NotFound)).await
-                            {
-                                eprintln!("[SERVER] Failed to notify client that registration with id \"{id}\" did not exist: {e}");
                             }
                         }
                     }

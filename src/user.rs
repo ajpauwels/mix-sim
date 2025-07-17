@@ -6,8 +6,8 @@ use tokio::{
 };
 
 use crate::{
-    client_command::ClientCommand, client_send_error::ClientSendError,
-    directory_registration::DirectoryRegistration,
+    client::{ClientCommand, ClientSendError},
+    directory::{DirectoryCommand, DirectoryRegistration},
 };
 
 pub struct User {
@@ -17,10 +17,14 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(client_tx: MpscSender<ClientCommand>) -> Self {
+    pub fn new(
+        client_tx: MpscSender<ClientCommand>,
+        directory_tx: MpscSender<DirectoryCommand>,
+    ) -> Self {
         Self {
             address_book: HashMap::new(),
             client_tx,
+            directory_tx,
         }
     }
 

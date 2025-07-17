@@ -4,6 +4,11 @@ use config::{Config as ExternalConfig, ConfigError as ExternalConfigError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
+pub struct Directory {
+    pub buffer_size: Option<usize>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Client {
     pub id: String,
     pub buffer_size: Option<usize>,
@@ -17,6 +22,7 @@ pub struct Server {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     pub server: Option<Server>,
+    pub directory: Option<Directory>,
     pub clients: Option<Vec<Client>>,
 }
 
