@@ -7,9 +7,9 @@ clients:
   buffer_size: 32
 - id: alice
   buffer_size: 32
-- id: alex
-  buffer_size: 32
-- id: juliette
-  buffer_size: 32
-- id: michael
-  buffer_size: 32
+# - id: alex
+#   buffer_size: 32
+# - id: juliette
+#   buffer_size: 32
+# - id: michael
+#   buffer_size: 32

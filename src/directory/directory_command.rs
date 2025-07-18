@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use tokio::sync::mpsc::Sender as MpscSender;
 
 use crate::directory::{
@@ -13,4 +15,5 @@ pub enum DirectoryCommand {
         String,
         MpscSender<Result<DirectoryRegistration, GetDirectoryRegistrationError>>,
     ),
+    GetAllRegistrations(MpscSender<HashMap<String, DirectoryRegistration>>),
 }

@@ -1,8 +1,9 @@
 use tokio::sync::mpsc::{self, Receiver as MpscReceiver, Sender as MpscSender};
 
 use crate::{
-    client::ClientCommand, client::ClientSendError, message::Message, server::ServerCommand,
-    server::ServerRegistration, server::ServerRegistrationError,
+    client::{ClientCommand, ClientSendError},
+    message::{Message, Payload},
+    server::{ServerCommand, ServerRegistration, ServerRegistrationError},
 };
 
 pub struct Client {
@@ -61,17 +62,19 @@ impl Client {
         while let Some(cmd) = self.client_rx.recv().await {
             match cmd {
                 // Receive a message from another user
-                ClientCommand::ReceiveMessage(msg) => {
-                    println!(
-                        "[CLIENT][{}] Received message from \"{}\": {}",
-                        &self.id,
-                        msg.from(),
-                        msg.body()
-                    );
-                }
+                ClientCommand::ReceiveMessage(msg) => match msg.body() {
+                    Payload::String(s) => {
+                        println!(
+                            "[CLIENT][{}] Received message from \"{}\": {}",
+                            &self.id,
+                            msg.from(),
+                            s
+                        );
+                    }
+                    Payload::SphinxPacket(_) => todo!(),
+                },
                 // Send a message to another user
                 ClientCommand::Send(to, body, response_tx) => {
-                    // if let Some(registration) = self.address_book.get(&to) {
                     let cmd = ServerCommand::Send(Message::new(&to, &self.id, &body));
                     let send_response = server_tx.send(cmd).await.map_err(ClientSendError::from);
                     if let Err(e) = &send_response {
@@ -86,15 +89,6 @@ impl Client {
                                 &self.id, &to,
                             );
                     }
-                    // } else if let Err(e) = response_tx
-                    //     .send(Err(ClientSendError::RecipientNotFound))
-                    //     .await
-                    // {
-                    //     eprintln!(
-                    //         "[CLIENT][{}] Failed to respond to request to send message to \"{}\": {e}",
-                    //         &self.id, &to,
-                    //     );
-                    // }
                 }
             }
         }

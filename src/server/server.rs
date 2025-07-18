@@ -1,10 +1,14 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{
+    hash_map::{Entry, OccupiedEntry},
+    HashMap,
+};
 
 use tokio::sync::mpsc::{self, Receiver as MpscReceiver, Sender as MpscSender};
 
 use crate::{
-    client::ClientCommand, server::ServerCommand, server::ServerRegistration,
-    server::ServerRegistrationError,
+    client::ClientCommand,
+    message::Message,
+    server::{ServerCommand, ServerRegistration, ServerRegistrationError},
 };
 
 pub struct Server {
@@ -23,45 +27,58 @@ impl Server {
         }
     }
 
+    pub async fn register(
+        &mut self,
+        registration: ServerRegistration,
+    ) -> Result<&ServerRegistration, ServerRegistrationError> {
+        match self.registrations.entry(registration.id.clone()) {
+            Entry::Occupied(oe) => Err(ServerRegistrationError::Conflict(oe.key().to_owned())),
+            Entry::Vacant(ve) => Ok(ve.insert(registration)),
+        }
+    }
+
+    pub async fn send(&self, msg: Message) {
+        match self.registrations.get(msg.to()) {
+            Some(registration) => match registration.tx {
+                Some(ref tx) => {
+                    if let Err(e) = tx.send(ClientCommand::ReceiveMessage(msg)).await {
+                        eprintln!("[SERVER] Could not forward message: {e}");
+                    }
+                }
+                None => {
+                    eprintln!("[SERVER] Could not forward message: client is unavailable");
+                }
+            },
+            None => {
+                println!("[SERVER] No client registered at id \"{}\"", msg.to());
+            }
+        }
+    }
+
     pub async fn listen(&mut self) {
         println!("[SERVER] Starting listening");
         while let Some(cmd) = self.server_rx.recv().await {
             match cmd {
                 ServerCommand::Register(registration, response_tx) => {
-                    match self.registrations.entry(registration.id.clone()) {
-                        Entry::Occupied(oe) => {
-                            println!("[SERVER] Client already registered at id \"{}\"", oe.key());
-                            if let Err(e) = response_tx
-                                .send(Err(ServerRegistrationError::Conflict))
-                                .await
-                            {
-                                eprintln!("[SERVER] Failed to notify client that id \"{}\" is already registered: {e}", oe.key());
+                    match self.register(registration).await {
+                        Ok(registration) => {
+                            println!(
+                                "[SERVER] Client with id \"{}\" registered",
+                                &registration.id
+                            );
+                            if let Err(e) = response_tx.send(Ok(())).await {
+                                eprintln!("[SERVER] Failed to notify client of successful registration: {e}");
                             }
                         }
-                        Entry::Vacant(ve) => {
-                            let oe = ve.insert_entry(registration);
-                            println!("[SERVER] Client with id \"{}\" registered", oe.key());
-                            if let Err(e) = response_tx.send(Ok(())).await {
-                                eprintln!("[SERVER] Failed to notify client that id \"{}\" was successfully registered: {e}", oe.key());
+                        Err(e) => {
+                            eprintln!("[SERVER] Failed to register new client: {e}");
+                            if let Err(e) = response_tx.send(Err(e)).await {
+                                eprintln!("[SERVER] Failed to notify client that an error was encountered during registration: {e}");
                             }
                         }
                     }
                 }
-                ServerCommand::Send(msg) => match self.registrations.get(msg.to()) {
-                    Some(registration) => match registration.tx {
-                        Some(ref tx) => {
-                            if let Err(e) = tx.send(ClientCommand::ReceiveMessage(msg)).await {
-                                eprintln!("[SERVER] Could not forward message: {e}");
-                            }
-                        }
-                        None => {
-                            eprintln!("[SERVER] Could not forward message: client is unavailable");
-                        }
-                    },
-                    None => {
-                        println!("[SERVER] No client registered at id \"{}\"", msg.to());
-                    }
-                },
+                ServerCommand::Send(msg) => self.send(msg).await,
             }
         }
     }

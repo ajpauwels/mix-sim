@@ -1,3 +1,4 @@
+mod bytes;
 mod client;
 mod config;
 mod directory;
@@ -62,7 +63,7 @@ async fn main() {
             client_set.spawn(async move { client.listen(server_tx).await });
 
             let directory_tx = directory_tx.clone();
-            let user = User::new(client_tx, directory_tx);
+            let mut user = User::new(&client_config.id, client_tx, directory_tx);
 
             if client_config.id == next_client_config.id {
                 let user_id = client_config.id.clone();

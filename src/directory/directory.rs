@@ -64,8 +64,8 @@ impl Directory {
                                 .await
                             {
                                 eprintln!(
-                                    "[DIRECTORY] Failed to return registration with id \"{id}\": {e}"
-                                );
+                                                "[DIRECTORY] Failed to return registration with id \"{id}\": {e}"
+                                            );
                             }
                         }
                         None => {
@@ -76,6 +76,11 @@ impl Directory {
                                 eprintln!("[DIRECTORY] Failed to respond that registration with id \"{id}\" did not exist: {e}");
                             }
                         }
+                    }
+                }
+                DirectoryCommand::GetAllRegistrations(response_tx) => {
+                    if let Err(e) = response_tx.send(self.registrations.clone()).await {
+                        eprintln!("[DIRECTORY] Failed to send all registrations: {e}");
                     }
                 }
             }

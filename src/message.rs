@@ -1,15 +1,28 @@
 use std::fmt::Display;
 
-#[derive(Clone, Debug)]
+use sphinx_packet::SphinxPacket;
+
+pub enum Payload {
+    String(String),
+    SphinxPacket(SphinxPacket),
+}
+
 pub struct Message {
     to: String,
     from: String,
-    body: String,
+    body: Payload,
 }
 
 impl Display for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "to: {}, from: {}, {}", &self.to, &self.from, &self.body)
+        match &self.body {
+            Payload::String(s) => {
+                write!(f, "to: {}, from: {}, {}", &self.to, &self.from, &s)
+            }
+            Payload::SphinxPacket(_) => {
+                write!(f, "to: {}, from: {}, <sphinx packet>", &self.to, &self.from)
+            }
+        }
     }
 }
 
@@ -18,7 +31,7 @@ impl Message {
         Message {
             to: to.to_owned(),
             from: from.to_owned(),
-            body: body.to_owned(),
+            body: Payload::String(body.to_owned()),
         }
     }
 
@@ -30,7 +43,7 @@ impl Message {
         &self.from
     }
 
-    pub fn body(&self) -> &str {
+    pub fn body(&self) -> &Payload {
         &self.body
     }
 }
