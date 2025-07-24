@@ -1,3 +1,5 @@
+metrics:
+  enable: true
 directory:
   buffer_size: 32
 server:
@@ -7,9 +9,19 @@ clients:
   buffer_size: 32
 - id: alice
   buffer_size: 32
-# - id: alex
-#   buffer_size: 32
-# - id: juliette
-#   buffer_size: 32
-# - id: michael
-#   buffer_size: 32
+- id: alex
+  buffer_size: 32
+- id: juliette
+  buffer_size: 32
+- id: michael
+  buffer_size: 32
+- id: sean
+  buffer_size: 32
+- id: laurie
+  buffer_size: 32
+- id: luis
+  buffer_size: 32
+- id: jenny
+  buffer_size: 32
+- id: ceren
+  buffer_size: 32

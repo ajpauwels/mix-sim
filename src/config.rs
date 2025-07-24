@@ -20,10 +20,16 @@ pub struct Server {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+pub struct Metrics {
+    pub enable: Option<bool>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     pub server: Option<Server>,
     pub directory: Option<Directory>,
     pub clients: Option<Vec<Client>>,
+    pub metrics: Option<Metrics>,
 }
 
 #[derive(Debug)]

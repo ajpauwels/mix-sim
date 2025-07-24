@@ -1,13 +1,10 @@
-use std::collections::{
-    hash_map::{Entry, OccupiedEntry},
-    HashMap,
-};
+use std::collections::{hash_map::Entry, HashMap};
 
 use tokio::sync::mpsc::{self, Receiver as MpscReceiver, Sender as MpscSender};
 
 use crate::{
     client::ClientCommand,
-    message::Message,
+    packet::Packet,
     server::{ServerCommand, ServerRegistration, ServerRegistrationError},
 };
 
@@ -37,20 +34,20 @@ impl Server {
         }
     }
 
-    pub async fn send(&self, msg: Message) {
-        match self.registrations.get(msg.to()) {
+    pub async fn send(&self, packet: Packet) {
+        match self.registrations.get(packet.to()) {
             Some(registration) => match registration.tx {
                 Some(ref tx) => {
-                    if let Err(e) = tx.send(ClientCommand::ReceiveMessage(msg)).await {
-                        eprintln!("[SERVER] Could not forward message: {e}");
+                    if let Err(e) = tx.send(ClientCommand::ReceivePacket(packet)).await {
+                        eprintln!("[SERVER] Could not forward packet: {e}");
                     }
                 }
                 None => {
-                    eprintln!("[SERVER] Could not forward message: client is unavailable");
+                    eprintln!("[SERVER] Could not forward packet: client is unavailable");
                 }
             },
             None => {
-                println!("[SERVER] No client registered at id \"{}\"", msg.to());
+                println!("[SERVER] No client registered at id \"{}\"", packet.to());
             }
         }
     }
@@ -78,7 +75,7 @@ impl Server {
                         }
                     }
                 }
-                ServerCommand::Send(msg) => self.send(msg).await,
+                ServerCommand::Send(packet) => self.send(packet).await,
             }
         }
     }
